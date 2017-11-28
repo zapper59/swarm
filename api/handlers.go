@@ -22,6 +22,7 @@ import (
 	typesversions "github.com/docker/docker/api/types/versions"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/pkg/parsers/kernel"
+	engineapi "github.com/docker/docker/client"
 	"github.com/docker/swarm/cluster"
 	"github.com/docker/swarm/experimental"
 	"github.com/docker/swarm/version"
@@ -718,7 +719,11 @@ func deleteContainers(c *context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := c.cluster.RemoveContainer(container, force, volumes); err != nil {
-		httpError(w, err.Error(), http.StatusInternalServerError)
+		if (engineapi.IsErrNotFound(err)) {
+			httpError(w, fmt.Sprintf("Container %s not found", name), http.StatusNotFound)
+		} else {
+			httpError(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -1052,7 +1057,11 @@ func deleteNetworks(c *context, w http.ResponseWriter, r *http.Request) {
 
 	if network := c.cluster.Networks().Uniq().Get(id); network != nil {
 		if err := c.cluster.RemoveNetwork(network); err != nil {
-			httpError(w, err.Error(), http.StatusInternalServerError)
+			if (engineapi.IsErrNotFound(err)) {
+				httpError(w, fmt.Sprintf("Container %s not found", name), http.StatusNotFound)
+			} else {
+				httpError(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 	} else {
